@@ -135,3 +135,17 @@ node node_modules/expo/bin/cli prebuild --platform android  # generate android/
 - Never commit `.env`, keystores, or API keys.
 - Every milestone: tests green → commit → push → append to this log.
 - Money math stays in `src/lib/risk.ts` — deterministic, no AI in the loop.
+
+## 2026-09-26 — Build pivot: local Gradle -> EAS cloud
+- Local `./gradlew assembleDebug` is BLOCKED in this sandbox: loopback TCP is
+  intercepted (a Java socket test showed 127.0.0.1 traffic answered by the
+  sandbox instead of the peer), so the Gradle daemon client<->daemon handshake
+  dies with "Broken pipe". No Gradle version can work around this.
+- Pivot: EAS cloud build (Free tier: 30 builds/mo total incl. Android, no card,
+  no billing). eas.json already has preview->APK and production->AAB.
+- Needs: user's Expo access token (free account at expo.dev). Used once as
+  EXPO_TOKEN, never stored.
+- Toolchain notes for handoff: JDK17 at ~/jdk17, SDK at ~/Android/Sdk
+  (platform-tools, platforms/android-36, build-tools/36.0.0 installed manually
+  via curl because sdkmanager's Java networking can't traverse the proxy),
+  Gradle 9.3.1 at ~/gradle/gradle-9.3.1, proxy in ~/.gradle/gradle.properties.
