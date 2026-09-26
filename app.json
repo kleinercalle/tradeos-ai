@@ -11,6 +11,7 @@
       "icon": "./assets/expo.icon"
     },
     "android": {
+      "package": "com.tradeosai.app",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -25,6 +26,13 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "TRADEOS AI needs photo access so you can attach chart screenshots to your ICT analysis.",
+          "microphonePermission": false
+        }
+      ],
       [
         "expo-splash-screen",
         {

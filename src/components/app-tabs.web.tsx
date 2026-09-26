@@ -15,18 +15,25 @@ import { ThemedView } from './themed-view';
 
 import { Colors, MaxContentWidth, Spacing } from '@/constants/theme';
 
+const TABS = [
+  { name: 'home', label: 'Home', href: '/' },
+  { name: 'analyze', label: 'Analyze', href: '/analyze' },
+  { name: 'risk', label: 'Risk', href: '/risk' },
+  { name: 'journal', label: 'Journal', href: '/journal' },
+  { name: 'pro', label: 'Pro', href: '/pro' },
+] as const;
+
 export default function AppTabs() {
   return (
     <Tabs>
       <TabSlot style={{ height: '100%' }} />
       <TabList asChild>
         <CustomTabList>
-          <TabTrigger name="home" href="/" asChild>
-            <TabButton>Home</TabButton>
-          </TabTrigger>
-          <TabTrigger name="explore" href="/explore" asChild>
-            <TabButton>Explore</TabButton>
-          </TabTrigger>
+          {TABS.map((t) => (
+            <TabTrigger key={t.name} name={t.name} href={t.href} asChild>
+              <TabButton>{t.label}</TabButton>
+            </TabTrigger>
+          ))}
         </CustomTabList>
       </TabList>
     </Tabs>
@@ -55,7 +62,7 @@ export function CustomTabList(props: TabListProps) {
     <View {...props} style={styles.tabListContainer}>
       <ThemedView type="backgroundElement" style={styles.innerContainer}>
         <ThemedText type="smallBold" style={styles.brandText}>
-          Expo Starter
+          TRADEOS AI
         </ThemedText>
 
         {props.children}

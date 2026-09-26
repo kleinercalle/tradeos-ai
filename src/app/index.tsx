@@ -1,98 +1,74 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Link } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { Pressable, StyleSheet } from 'react-native';
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
+import { Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
+import { loadEntries, summarize, type JournalSummary } from '@/lib/journal';
 
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
-  return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
-  );
-}
+const CARDS = [
+  { href: '/analyze', title: 'ICT Analysis', desc: 'Daily → 1H → 15M → 1M bias flow' },
+  { href: '/risk', title: 'Risk Calculator', desc: 'Deterministic futures position sizing' },
+  { href: '/journal', title: 'Journal', desc: 'Local-first trade log, no account needed' },
+  { href: '/pro', title: 'Go Pro', desc: 'Unlock premium via RevenueCat' },
+] as const;
 
 export default function HomeScreen() {
+  const theme = useTheme();
+  const [summary, setSummary] = useState<JournalSummary | null>(null);
+
+  useEffect(() => {
+    loadEntries().then((e) => setSummary(summarize(e)));
+  }, []);
+
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
+    <Screen>
+      <ThemedText type="title">TRADEOS AI</ThemedText>
+      <ThemedText themeColor="textSecondary">
+        ICT playbook · deterministic risk · local-first journal
+      </ThemedText>
 
-        <ThemedText type="code" style={styles.code}>
-          get started
+      <ThemedView style={[styles.stats, { backgroundColor: theme.backgroundElement }]}>
+        <ThemedText type="smallBold">Journal</ThemedText>
+        <ThemedText type="small" themeColor="textSecondary">
+          {summary
+            ? `${summary.total} trades · ${summary.closed} closed · ${summary.totalR > 0 ? '+' : ''}${summary.totalR}R · ${summary.winRate}% win`
+            : 'loading…'}
         </ThemedText>
+      </ThemedView>
 
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
+      {CARDS.map((c) => (
+        <Link key={c.href} href={c.href} asChild>
+          <Pressable
+            style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
+            <ThemedText type="smallBold">{c.title}</ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">
+              {c.desc}
+            </ThemedText>
+          </Pressable>
+        </Link>
+      ))}
 
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
+      <ThemedText type="small" themeColor="textSecondary" style={styles.foot}>
+        v1.0.0 · Shipaton MVP · your data never leaves this device
+      </ThemedText>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
+  stats: {
+    borderRadius: Spacing.three,
+    padding: Spacing.three,
+    gap: Spacing.one,
   },
-  safeArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
+  card: {
+    borderRadius: Spacing.three,
+    padding: Spacing.four,
+    gap: Spacing.one,
   },
-  heroSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
-  },
-  title: {
-    textAlign: 'center',
-  },
-  code: {
-    textTransform: 'uppercase',
-  },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
-  },
+  foot: { textAlign: 'center', marginTop: Spacing.two },
 });
