@@ -2,6 +2,7 @@ import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import { useColorScheme } from 'react-native';
 
 import { Colors } from '@/constants/theme';
+import { resolveColorScheme } from '@/lib/color-scheme';
 
 const TABS = [
   { name: 'index', label: 'Home', icon: require('@/assets/images/tabIcons/home.png') },
@@ -12,8 +13,9 @@ const TABS = [
 ] as const;
 
 export default function AppTabs() {
-  const scheme = useColorScheme();
-  const colors = Colors[scheme === 'unspecified' ? 'light' : scheme];
+  // Never index Colors with the raw nullable hook value: a null scheme used
+  // to throw during the first render and freeze the app on the splash screen.
+  const colors = Colors[resolveColorScheme(useColorScheme())];
 
   return (
     <NativeTabs
