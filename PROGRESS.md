@@ -149,3 +149,17 @@ node node_modules/expo/bin/cli prebuild --platform android  # generate android/
   (platform-tools, platforms/android-36, build-tools/36.0.0 installed manually
   via curl because sdkmanager's Java networking can't traverse the proxy),
   Gradle 9.3.1 at ~/gradle/gradle-9.3.1, proxy in ~/.gradle/gradle.properties.
+
+## 2026-09-26 — First APK built via GitHub Actions (success)
+- EAS cloud build abandoned for now: the EXPO_TOKEN is a robot token that
+  cannot CREATE Android keystores on Expo servers (needs a user session), and
+  credentials.json only works in interactive `eas credentials`.
+- GitHub Actions workflow `.github/workflows/android-preview.yml`:
+  ubuntu-latest, Node 24, Temurin JDK 17, npm ci, expo prebuild, gradle
+  assembleDebug, uploads APK artifact. Trigger: workflow_dispatch.
+- Run 36277800447: success. APK: 233MB, package com.tradeosai.app,
+  versionName 1.0.0 (versionCode 1), minSdk 24, targetSdk 36, signed (debug).
+- Release keystore generated locally at android/keystores/tradeos-release.jks
+  (gitignored) + credentials.json (gitignored). Needed later for the
+  Galaxy Store signed release/AAB.
+- APK copy: ~/workspace/your_files/tradeos-ai-preview.apk
