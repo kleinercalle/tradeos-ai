@@ -163,3 +163,14 @@ node node_modules/expo/bin/cli prebuild --platform android  # generate android/
   (gitignored) + credentials.json (gitignored). Needed later for the
   Galaxy Store signed release/AAB.
 - APK copy: ~/workspace/your_files/tradeos-ai-preview.apk
+
+## 2026-09-26 — Release v1.0.0-preview con APK directo
+- Nuevo workflow `.github/workflows/release-apk.yml`: al publicar una release
+  (trigger `release: published`) compila el APK y lo adjunta automáticamente
+  como asset `tradeos-ai-<tag>.apk` con `softprops/action-gh-release@v2`.
+- Release v1.0.0-preview creada; workflow run 36279135787: success.
+- Asset: tradeos-ai-v1.0.0-preview.apk (233MB), package com.tradeosai.app,
+  versionName 1.0.0, minSdk 24, targetSdk 36, firma verificada con apksigner.
+- Tests: 8/8 (tsx --test). tsc --noEmit y expo lint limpios. Package name
+  sin cambios; código existente intacto.
+- Release page: https://github.com/kleinercalle/tradeos-ai/releases/tag/v1.0.0-preview
