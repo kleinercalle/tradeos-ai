@@ -45,6 +45,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "9ad70e75-26fb-42b4-b7d2-a8bd2a3a5633"
+      }
+    },
+    "owner": "kleinercalle12s-team"
   }
 }
