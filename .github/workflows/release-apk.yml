@@ -1,11 +1,14 @@
 name: Publish APK to Release
 
-# When you publish a GitHub Release (e.g. v1.0.0-preview), this workflow builds
-# the Android APK in the cloud and attaches it directly to the release, so the
-# APK can be downloaded with a single tap from a phone browser.
+# When you publish a GitHub Release (e.g. v1.0.1), this workflow builds the
+# Android APK in RELEASE mode in the cloud and attaches it directly to the
+# release, so the APK can be downloaded with a single tap from a phone browser.
+#
+# Release mode is required: assembleDebug does NOT package the JS bundle,
+# which leaves the app stuck on the splash screen ("Unable to load script").
 #
 # Usage (from github.com or the GitHub mobile app):
-#   Releases → Draft a new release → tag v1.0.0-preview → Publish release
+#   Releases → Draft a new release → tag v1.0.1 → Publish release
 # The APK appears under "Assets" as tradeos-ai-<tag>.apk once the build finishes.
 
 on:
@@ -40,13 +43,32 @@ jobs:
       - name: Expo prebuild (Android)
         run: npx expo prebuild --platform android --non-interactive
 
-      - name: Build debug APK
-        run: cd android && ./gradlew assembleDebug --no-daemon
+      - name: Restore release keystore
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/release.keystore
+          ls -la android/app/release.keystore
+
+      - name: Configure release signing
+        run: python3 .github/scripts/configure-release-signing.py
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+
+      - name: Build release APK
+        run: cd android && ./gradlew assembleRelease --no-daemon
+
+      - name: Verify APK signature and package
+        run: |
+          APK=android/app/build/outputs/apk/release/app-release.apk
+          ls -la "$APK"
+          $ANDROID_HOME/build-tools/36.0.0/apksigner verify --print-certs "$APK" | head -5
+          aapt dump badging "$APK" | head -2
 
       - name: Prepare release APK
         run: |
           TAG="${{ github.event.release.tag_name }}"
-          cp android/app/build/outputs/apk/debug/app-debug.apk "tradeos-ai-${TAG}.apk"
+          cp android/app/build/outputs/apk/release/app-release.apk "tradeos-ai-${TAG}.apk"
           ls -la "tradeos-ai-${TAG}.apk"
 
       - name: Attach APK to release

@@ -1,9 +1,10 @@
 name: Android Emulator Cold Start Test
 
 # Functional cold-start test on a real Android emulator (API 34):
-# builds the debug APK, installs it, launches the app, waits, then captures
-# a screenshot and the full logcat. Proves the app actually reaches Home
-# instead of getting stuck on the splash screen.
+# builds the RELEASE APK (the same artifact users install), installs it,
+# launches the app, waits, then captures a screenshot and the full logcat.
+# Proves the app actually reaches Home instead of getting stuck on the
+# splash screen.
 #
 # Trigger: Actions tab → "Android Emulator Cold Start Test" → Run workflow.
 
@@ -42,8 +43,19 @@ jobs:
       - name: Expo prebuild (Android)
         run: npx expo prebuild --platform android --non-interactive
 
-      - name: Build debug APK
-        run: cd android && ./gradlew assembleDebug --no-daemon
+      - name: Restore release keystore
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/release.keystore
+
+      - name: Configure release signing
+        run: python3 .github/scripts/configure-release-signing.py
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+
+      - name: Build release APK
+        run: cd android && ./gradlew assembleRelease --no-daemon
 
       - name: Cold start on emulator
         uses: reactivecircus/android-emulator-runner@v2
@@ -54,7 +66,7 @@ jobs:
           profile: pixel_7
           script: |
             set -x
-            adb install android/app/build/outputs/apk/debug/app-debug.apk
+            adb install android/app/build/outputs/apk/release/app-release.apk
             # Cold start: force-stop first to guarantee a fresh process
             adb shell am force-stop com.tradeosai.app
             adb shell am start -n com.tradeosai.app/.MainActivity
