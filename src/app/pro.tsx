@@ -12,6 +12,7 @@ import {
   getOfferingsSafe,
   hasPurchasesKey,
   initPurchases,
+  isGalaxyStore,
   isPro,
   type CustomerInfo,
 } from '@/lib/purchases';
@@ -110,9 +111,10 @@ export default function ProScreen() {
         <ThemedView style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
           <ThemedText type="smallBold">Paywall wiring ready</ThemedText>
           <ThemedText type="small" themeColor="textSecondary">
-            Add your RevenueCat Android public API key as EXPO_PUBLIC_REVENUECAT_API_KEY
-            in .env, create the “pro” entitlement + offering in the RevenueCat
-            dashboard, and this screen becomes a live paywall. No key = no crash.
+            Add your RevenueCat Galaxy Store public key as
+            EXPO_PUBLIC_REVENUECAT_GALAXY_KEY in .env, create the “pro”
+            entitlement + a current offering in the RevenueCat dashboard, and
+            this screen becomes a live paywall. No key = no crash.
           </ThemedText>
         </ThemedView>
       )}
@@ -153,9 +155,15 @@ export default function ProScreen() {
       ) : null}
 
       <ThemedText type="small" themeColor="textSecondary" style={styles.center}>
-        Subscriptions are handled by Google Play Billing via RevenueCat. Cancel
-        anytime in the Play Store.
+        {isGalaxyStore()
+          ? 'Subscriptions are handled by Samsung Galaxy Store billing via RevenueCat. Cancel anytime in the Galaxy Store.'
+          : 'Subscriptions are handled by the store billing via RevenueCat.'}
       </ThemedText>
+      {__DEV__ && isGalaxyStore() && (
+        <ThemedText type="small" themeColor="textSecondary" style={styles.center}>
+          Dev build: Galaxy billing runs in TEST mode.
+        </ThemedText>
+      )}
     </Screen>
   );
 }

@@ -1,24 +1,42 @@
 /**
  * RevenueCat wiring for the Shipaton monetization requirement.
  *
+ * Target store: Samsung Galaxy Store (RevenueCat Galaxy support, RN SDK 10.3+).
  * Safe to import anywhere: if no API key is configured the module degrades
  * to a local "not configured" state and never throws.
  *
- * Setup: add your RevenueCat *Android* public API key to .env as
- *   EXPO_PUBLIC_REVENUECAT_API_KEY=appl_...   (use the `test_`/`goog_` key)
- * then create an Entitlement id "pro" and an Offering in the RevenueCat dashboard.
+ * Setup:
+ *   1. Create a free RevenueCat account and a project.
+ *   2. Add a Galaxy Store app to the project -> copy its public key (galaxy_...).
+ *   3. .env: EXPO_PUBLIC_REVENUECAT_GALAXY_KEY=galaxy_...
+ *   4. In RevenueCat: Entitlement id "pro", add the Galaxy Store subscription
+ *      product, create an Offering and mark it current.
+ *
+ * Purchases are NEVER claimed as operational until a real test purchase
+ * succeeds on a physical Galaxy device (Galaxy Store has no emulator billing).
  */
 import Purchases, { type CustomerInfo, type PurchasesOffering } from 'react-native-purchases';
+import {
+  GALAXY_BILLING_MODE,
+  type GalaxyBillingMode,
+} from 'react-native-purchases-store-galaxy';
 
 export type { CustomerInfo, PurchasesOffering };
 
-const API_KEY = process.env.EXPO_PUBLIC_REVENUECAT_API_KEY?.trim() ?? '';
+const GALAXY_KEY = process.env.EXPO_PUBLIC_REVENUECAT_GALAXY_KEY?.trim() ?? '';
+// Legacy Play-Store key path, kept as a fallback (not our target store).
+const LEGACY_KEY = process.env.EXPO_PUBLIC_REVENUECAT_API_KEY?.trim() ?? '';
 export const PRO_ENTITLEMENT = 'pro';
 
+const useGalaxy = GALAXY_KEY.length > 0;
 let configured = false;
 
 export function hasPurchasesKey(): boolean {
-  return API_KEY.length > 0;
+  return useGalaxy || LEGACY_KEY.length > 0;
+}
+
+export function isGalaxyStore(): boolean {
+  return useGalaxy;
 }
 
 export function purchasesConfigured(): boolean {
@@ -29,7 +47,19 @@ export function purchasesConfigured(): boolean {
 export async function initPurchases(): Promise<void> {
   if (configured || !hasPurchasesKey()) return;
   try {
-    Purchases.configure({ apiKey: API_KEY });
+    if (useGalaxy) {
+      // TEST billing in dev builds, PRODUCTION in release builds.
+      const billingMode: GalaxyBillingMode = __DEV__
+        ? GALAXY_BILLING_MODE.TEST
+        : GALAXY_BILLING_MODE.PRODUCTION;
+      Purchases.configure({
+        apiKey: GALAXY_KEY,
+        store: 'GALAXY',
+        galaxyBillingMode: billingMode,
+      });
+    } else {
+      Purchases.configure({ apiKey: LEGACY_KEY });
+    }
     configured = true;
   } catch (e) {
     console.warn('[purchases] configure failed:', e);
