@@ -255,11 +255,22 @@ commit secrets; never ask for private credentials in chat (use Secure Vault
 - [ ] Risk-based contract sizing; new warnings (spec section)
 - [ ] Extend tests; keep existing tests green
 
-### Phase 4 — RevenueCat production
-- [ ] BLOCKED (user): create free RevenueCat account (guided)
-- [ ] BLOCKED (user): dashboard config — Android app, `pro` entitlement,
-      offering, monthly Pro, public SDK key via secure flow
-- [ ] Purchase restore + status verification; real billing test
+### Phase 4 — RevenueCat production (target: Samsung Galaxy Store)
+- [x] Verified: RevenueCat officially supports Galaxy Store (Samsung IAP);
+      RN SDK ≥10.3.0 via `react-native-purchases-store-galaxy`
+      (installed 10.10.2, commit 5c1b6d6)
+- [x] `purchases.ts`: store `GALAXY`, TEST billing in dev / PRODUCTION in
+      release, graceful no-key fallback; pro.tsx copy updated
+- [x] tsc + lint + expo-doctor 21/21 + tests 22/22 green
+- [ ] BLOCKED (user): create free RevenueCat account → project → **Galaxy
+      Store app** → public key (`galaxy_...`); create `pro` entitlement;
+      add Galaxy subscription product; offering marked current
+- [ ] BLOCKED (user): Samsung Seller Portal — Commercial Seller Status
+      (**needs D-U-N-S number** + bank/PayPal; can take days — start NOW),
+      register app, create monthly Pro subscription, activate it
+- [ ] Wire `galaxy_` key into release build (GitHub secret, never in repo)
+- [ ] Real purchase test on a PHYSICAL Galaxy device (emulator billing
+      unsupported) — user action
 - [ ] Do NOT claim purchases work until tested
 
 ### Phase 5 — Release engineering
