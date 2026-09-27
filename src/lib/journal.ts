@@ -18,6 +18,8 @@ export interface JournalEntry {
   notes: string;
   /** summary line produced by the ICT analysis flow, if any */
   timeframeBias?: string;
+  /** full AI report JSON (stringified IctReport), if any */
+  aiReport?: string;
 }
 
 const STORAGE_KEY = 'tradeos.journal.v1';
@@ -53,6 +55,7 @@ export function newEntry(
   if (partial.target !== undefined) entry.target = partial.target;
   if (partial.resultR !== undefined) entry.resultR = partial.resultR;
   if (partial.timeframeBias) entry.timeframeBias = partial.timeframeBias;
+  if (partial.aiReport) entry.aiReport = partial.aiReport;
   return entry;
 }
 
