@@ -8,7 +8,7 @@
  * No secrets here — just the public proxy URL. Consent must be obtained
  * in the UI before calling analyzeCharts().
  */
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 
 const PROXY_URL =
   process.env.EXPO_PUBLIC_GEMINI_PROXY_URL?.trim().replace(/\/+$/, '') ?? '';
