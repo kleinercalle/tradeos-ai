@@ -210,3 +210,65 @@ fully rendered with native tabs; logcat has 0 FATAL EXCEPTION and 0
 v1.0.1 (new release key) requires uninstalling the old APK first.
 
 **Validation:** expo-doctor 21/21 · tsc clean · eslint clean · 12/12 tests pass.
+
+## M2 Plan — started 2026-09-26
+
+Authorization: user mission dated 2026-09-26 — work directly in this repo.
+Hard rules: free tiers only; never spend money, enable paid billing, publish
+the app, or submit the competition entry without explicit approval. Never
+commit secrets; never ask for private credentials in chat (use Secure Vault
+/ dashboard flows).
+
+### Audit (DONE 2026-09-26)
+- `src/app/analyze.tsx`: 4-TF guided checklist (bias + POIs + screenshot +
+  notes), deterministic synthesis, saves to journal. No AI yet.
+- `src/lib/risk.ts`: pure deterministic calculator (ES/MES/NQ/MNQ/YM/MYM/
+  RTY/GC/CL), warnings, tests in `risk.test.ts`. Must preserve + extend.
+- `src/lib/journal.ts`: AsyncStorage entries (symbol/direction/entry/stop/
+  target/contracts/resultR/notes/timeframeBias). Report can go in notes.
+- `src/lib/purchases.ts`: react-native-purchases ^10.10.2, graceful
+  degradation, NO key configured. Entitlement id `pro`.
+- No Gemini SDK, no backend. Release signing: PKCS12 keystore in GitHub
+  Secrets (see 2026-09-26 startup-fix entry).
+
+### Phase 1 — Gemini integration
+- [ ] IN PROGRESS: verify current Gemini API docs, pricing, free-tier models
+- [ ] BLOCKED (user): Gemini API key (Google AI Studio) → backend secrets only
+- [ ] BLOCKED (user): serverless account for the proxy (proposed: Cloudflare
+      Workers free tier — key never touches the app)
+- [ ] Worker: request validation, rate limits, image-size limits, timeouts,
+      cost controls
+- [ ] Structured JSON output + schema validation + honest error messages
+- [ ] Graceful fallback when free limits hit (never fake analysis)
+- [ ] Explicit in-app consent before sending screenshots
+
+### Phase 2 — ICT multi-timeframe (Daily/1H/15M/1M)
+- [ ] Instrument + date/session picker
+- [ ] Per-TF analysis prompts (structure, liquidity, FVG/OB, MSS,
+      displacement, invalidation per spec)
+- [ ] OBSERVED / POSSIBLE / NOT VERIFIED separation; NO TRADE on conflict
+- [ ] Educational final report; save to journal
+
+### Phase 3 — Risk calculator upgrades
+- [ ] Long/short, NQ/MNQ quick switch, commissions + slippage
+- [ ] Max risk/trade, daily risk budget, prop drawdown (incl. trailing)
+- [ ] Risk-based contract sizing; new warnings (spec section)
+- [ ] Extend tests; keep existing tests green
+
+### Phase 4 — RevenueCat production
+- [ ] BLOCKED (user): create free RevenueCat account (guided)
+- [ ] BLOCKED (user): dashboard config — Android app, `pro` entitlement,
+      offering, monthly Pro, public SDK key via secure flow
+- [ ] Purchase restore + status verification; real billing test
+- [ ] Do NOT claim purchases work until tested
+
+### Phase 5 — Release engineering
+- [ ] Signing audit (keystore in Secrets, never in repo) — DONE for APK
+- [ ] Verify target store format (APK vs AAB) for Galaxy Store
+- [ ] Icon, screenshots, description, privacy policy, data safety, demo
+      video, install instructions, release notes
+
+### Phase 6 — Shipaton
+- [ ] IN PROGRESS: verify current official rules + deadline
+- [ ] Devpost submission prep; no eligibility claims until public +
+      integration verified
