@@ -7,8 +7,8 @@
  *
  * Setup:
  *   1. Create a free RevenueCat account and a project.
- *   2. Add a Galaxy Store app to the project -> copy its public key (galaxy_...).
- *   3. .env: EXPO_PUBLIC_REVENUECAT_GALAXY_KEY=galaxy_...
+ *   2. Add a Galaxy Store app to the project -> copy its public key (galx_...).
+ *   3. .env: EXPO_PUBLIC_REVENUECAT_GALAXY_KEY=galx_...
  *   4. In RevenueCat: Entitlement id "pro", add the Galaxy Store subscription
  *      product, create an Offering and mark it current.
  *

@@ -262,13 +262,19 @@ commit secrets; never ask for private credentials in chat (use Secure Vault
 - [x] `purchases.ts`: store `GALAXY`, TEST billing in dev / PRODUCTION in
       release, graceful no-key fallback; pro.tsx copy updated
 - [x] tsc + lint + expo-doctor 21/21 + tests 22/22 green
-- [ ] BLOCKED (user): create free RevenueCat account → project → **Galaxy
-      Store app** → public key (`galaxy_...`); create `pro` entitlement;
-      add Galaxy subscription product; offering marked current
+- [x] BLOCKED (user) account+project DONE 2026-09-27: free account
+      (kleiner2024@gmail.com), project "TRADEOS AI", Galaxy Store app
+      (com.tradeosai.app), entitlement `pro` — all via guided setup
+- [x] Public Galaxy key wired: GitHub secret
+      EXPO_PUBLIC_REVENUECAT_GALAXY_KEY -> release workflow env
+      (key is public-by-design; never in repo)
 - [ ] BLOCKED (user): Samsung Seller Portal — Commercial Seller Status
       (**needs D-U-N-S number** + bank/PayPal; can take days — start NOW),
       register app, create monthly Pro subscription, activate it
-- [ ] Wire `galaxy_` key into release build (GitHub secret, never in repo)
+- [ ] BLOCKED (user): in Seller Portal get Service Account ID + private key
+      (API > Service Account) -> paste into RevenueCat Galaxy app config
+- [ ] After Samsung product exists: add product to RevenueCat catalog,
+      create current offering with monthly package attached to `pro`
 - [ ] Real purchase test on a PHYSICAL Galaxy device (emulator billing
       unsupported) — user action
 - [ ] Do NOT claim purchases work until tested
