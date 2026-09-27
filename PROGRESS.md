@@ -272,3 +272,38 @@ commit secrets; never ask for private credentials in chat (use Secure Vault
 - [ ] IN PROGRESS: verify current official rules + deadline
 - [ ] Devpost submission prep; no eligibility claims until public +
       integration verified
+
+## Research brief — Gemini API + Shipaton rules (verified 2026-09-26)
+
+### Gemini API
+- Recommended model: `gemini-3.8-flash` (stable flagship Flash, vision +
+  JSON schema, 1M context). Fallback chain: 3.7 → 3.6 → 2.5-flash.
+  `gemini-2.0-flash` is SHUT DOWN — do not use.
+- Free tier (AI Studio): ~20 req/day on 3.8-flash (community-measured;
+  official numbers only visible inside AI Studio). Free traffic shed first.
+- Paid: $0.75/$3.75 per 1M in/out tokens thru Dec 31 2026; DOUBLES Jan 2027.
+  One ICT report (4 screenshots + ~2k JSON out) ≈ $0.01–0.03.
+- REST: POST generativelanguage.googleapis.com/v1beta/models/
+  gemini-3.8-flash:generateContent; inlineData base64 images (≤20MB);
+  generationConfig responseMimeType=application/json + responseSchema.
+- JS SDK: `@google/genai` is current; `@google/generative-ai` deprecated.
+  Worker: plain fetch() REST, key in Worker secret, never in app.
+
+### Shipaton 2026 (official Devpost rules, fetched 2026-09-26)
+- Deadline: **Sep 30, 2026 11:45 PM PDT**. Judging Oct 1–13, winners Oct 21.
+- Stores: App Store, Google Play, OR Samsung Galaxy Store — Galaxy alone
+  suffices. **GitHub APK does NOT qualify.** First PUBLIC store version must
+  be released during Jul 31–Sep 30 2026 (our GitHub-only releases don't
+  count, so a first Galaxy Store release is still eligible).
+- RevenueCat: SDK must power ≥1 purchase (sandbox OK) + free trial or promo
+  code for judges. Must be accessible from the US.
+- Devpost needs: description, <2-min YouTube/Vimeo demo on-device,
+  store listing URL, 1024×1024 icon, ≥1 screenshot 1179×2556 (no frame),
+  trial/promo code.
+- ⚠️ App review can take multiple days — submitting to Galaxy Store is the
+  critical path. Do it ASAP.
+
+### M2 checklist updates
+- Phase 1 research: DONE. Model selected: gemini-3.8-flash.
+- Phase 5: target format = Galaxy Store (APK accepted there; confirm at
+  submission). Priority: store listing submission ASAP.
