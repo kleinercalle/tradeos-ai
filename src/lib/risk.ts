@@ -115,3 +115,185 @@ export function calculateRisk(input: RiskInput): RiskResult {
     warnings,
   };
 }
+
+/* =====================================================================
+ * Advanced risk — Phase 3 (M2).
+ *
+ * Wraps calculateRisk() without changing it. Adds direction checks,
+ * commission/slippage costs, per-trade caps, daily budget, and prop-firm
+ * drawdown tracking. Pure functions, same determinism guarantees.
+ * ===================================================================== */
+
+export type Direction = 'long' | 'short';
+
+export interface DrawdownConfig {
+  /** max allowed drawdown in USD, e.g. 2000 */
+  maxDrawdown: number;
+  /** true = floor trails the peak balance; false = floor fixed from peakBalance as start */
+  trailing: boolean;
+  /** highest balance reached (or starting balance when trailing=false) */
+  peakBalance: number;
+  currentBalance: number;
+}
+
+export interface AdvancedRiskInput extends RiskInput {
+  direction: Direction;
+  /** round-trip commission in USD per contract, e.g. 4.20 */
+  commissionPerContract?: number;
+  /** assumed extra slippage in ticks per contract */
+  slippageTicks?: number;
+  /** hard USD cap per trade; overrides riskPercent-derived amount when lower */
+  maxRiskPerTrade?: number;
+  /** remaining daily risk budget in USD */
+  dailyRiskBudget?: number;
+  drawdown?: DrawdownConfig;
+}
+
+export interface AdvancedRiskResult extends RiskResult {
+  direction: Direction;
+  /** USD cost per contract: commission + slippage value */
+  costPerContract: number;
+  /** costPerContract * contracts */
+  totalCosts: number;
+  /** riskAmount after the maxRiskPerTrade cap */
+  effectiveRiskAmount: number;
+  /** whole contracts that fit the remaining daily budget (null when no budget set) */
+  maxContractsByDailyBudget: number | null;
+  /** remaining drawdown in USD (null when not configured) */
+  remainingDrawdown: number | null;
+  drawdownBreached: boolean;
+}
+
+/**
+ * Heuristic: a stop wider than 2% of entry is flagged as unusually distant
+ * for intraday futures. Documented, tunable, instrument-agnostic.
+ */
+export const DISTANT_STOP_FRACTION = 0.02;
+
+export function calculateAdvancedRisk(input: AdvancedRiskInput): AdvancedRiskResult {
+  const base = calculateRisk(input);
+  // Drop base's "too small" advice (it suggests raising risk %); the
+  // advanced version below replaces it with safer guidance.
+  const warnings = base.warnings.filter((w) => !w.includes('too small'));
+  const { direction, spec } = input;
+
+  // 1. Direction: stop must sit on the correct side of entry.
+  let directionOk = true;
+  if (
+    Number.isFinite(input.entryPrice) &&
+    Number.isFinite(input.stopPrice) &&
+    input.entryPrice !== input.stopPrice
+  ) {
+    directionOk =
+      direction === 'long'
+        ? input.stopPrice < input.entryPrice
+        : input.stopPrice > input.entryPrice;
+    if (!directionOk) {
+      warnings.push(
+        `Stop is on the wrong side of entry for a ${direction}: ` +
+          (direction === 'long'
+            ? 'a long needs the stop BELOW entry.'
+            : 'a short needs the stop ABOVE entry.'),
+      );
+    }
+  }
+
+  // 2. Costs (opt-in; defaults keep results identical to calculateRisk).
+  const commission = Math.max(0, input.commissionPerContract ?? 0);
+  const slippageTicks = Math.max(0, input.slippageTicks ?? 0);
+  const costPerContract = round2(commission + slippageTicks * spec.tickValue);
+
+  // 3. Per-trade cap.
+  const cap = input.maxRiskPerTrade;
+  const capped = typeof cap === 'number' && cap > 0;
+  const effectiveRiskAmount = capped ? Math.min(base.riskAmount, round2(cap)) : base.riskAmount;
+  if (capped && round2(cap) < base.riskAmount) {
+    warnings.push(
+      `Capped by max risk/trade: $${round2(cap).toFixed(2)} instead of $${base.riskAmount.toFixed(2)}.`,
+    );
+  }
+
+  // 4. Sizing: stop risk + costs must fit the effective risk.
+  // sizingOk depends only on input validity + direction — not on base's
+  // sizing-outcome warnings — so advanced checks still fire on 0-contract
+  // trades instead of being swallowed.
+  const inputOk =
+    input.accountBalance > 0 &&
+    input.riskPercent > 0 &&
+    input.riskPercent <= 100 &&
+    Number.isFinite(input.entryPrice) &&
+    Number.isFinite(input.stopPrice) &&
+    input.entryPrice !== input.stopPrice &&
+    spec.tickSize > 0 &&
+    spec.tickValue > 0;
+  const sizingOk = inputOk && directionOk;
+  const lossWithCosts = round2(base.lossPerContract + costPerContract);
+  const contracts =
+    sizingOk && lossWithCosts > 0 ? Math.floor(effectiveRiskAmount / lossWithCosts) : 0;
+  const actualRisk = round2(contracts * base.lossPerContract);
+  const actualRiskPercent =
+    input.accountBalance > 0 ? round2((actualRisk / input.accountBalance) * 100) : 0;
+  const totalCosts = round2(contracts * costPerContract);
+
+  if (sizingOk && contracts === 0 && effectiveRiskAmount > 0) {
+    warnings.push(
+      `Risk of $${effectiveRiskAmount.toFixed(2)} is too small for 1 ${spec.symbol} contract ` +
+        `($${lossWithCosts.toFixed(2)} risk). Tighten the stop, use micros, or skip — ` +
+        `do not raise risk % to force it.`,
+    );
+  }
+
+  // 5. Excessively distant stop.
+  if (sizingOk && input.entryPrice > 0 && base.stopPoints / input.entryPrice > DISTANT_STOP_FRACTION) {
+    warnings.push(
+      `Stop is ${round2((base.stopPoints / input.entryPrice) * 100)}% away from entry — unusually distant for intraday futures. Double-check the stop price.`,
+    );
+  }
+
+  // 6. Daily risk budget.
+  let maxContractsByDailyBudget: number | null = null;
+  if (typeof input.dailyRiskBudget === 'number' && input.dailyRiskBudget >= 0) {
+    const budget = round2(input.dailyRiskBudget);
+    maxContractsByDailyBudget = lossWithCosts > 0 ? Math.floor(budget / lossWithCosts) : 0;
+    if (sizingOk && actualRisk > budget) {
+      warnings.push(
+        `This trade risks $${actualRisk.toFixed(2)} but only $${budget.toFixed(2)} of daily budget remains. ` +
+          `At most ${maxContractsByDailyBudget} contract(s) fit the budget — never exceed it.`,
+      );
+    }
+  }
+
+  // 7. Prop-firm drawdown.
+  let remainingDrawdown: number | null = null;
+  let drawdownBreached = false;
+  const dd = input.drawdown;
+  if (dd && dd.maxDrawdown > 0 && dd.peakBalance > 0 && dd.currentBalance > 0) {
+    const floor = round2(dd.peakBalance - dd.maxDrawdown);
+    remainingDrawdown = round2(dd.currentBalance - floor);
+    drawdownBreached = remainingDrawdown <= 0;
+    if (drawdownBreached) {
+      warnings.push(
+        `Drawdown limit breached ($${remainingDrawdown.toFixed(2)} remaining). Stop trading this account.`,
+      );
+    } else if (sizingOk && actualRisk > remainingDrawdown) {
+      warnings.push(
+        `This trade risks $${actualRisk.toFixed(2)} but only $${remainingDrawdown.toFixed(2)} of drawdown remains${dd.trailing ? ' (trailing)' : ''}. Size down or skip.`,
+      );
+    }
+  }
+
+  return {
+    ...base,
+    direction,
+    costPerContract,
+    totalCosts,
+    effectiveRiskAmount,
+    maxContractsByDailyBudget,
+    remainingDrawdown,
+    drawdownBreached,
+    contracts,
+    actualRisk,
+    actualRiskPercent,
+    warnings,
+  };
+}

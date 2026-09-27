@@ -351,3 +351,19 @@ commit secrets; never ask for private credentials in chat (use Secure Vault
   with the new native module).
 - NOTE: AI button is inert until EXPO_PUBLIC_GEMINI_PROXY_URL is set and
   the Worker is deployed (needs user's Cloudflare account).
+
+## Phase 3 — Risk calculator (2026-09-27, DONE)
+
+- `src/lib/risk.ts`: `calculateRisk()` UNCHANGED (existing tests untouched).
+  New `calculateAdvancedRisk()` wraps it:
+  - long/short direction check (wrong-side stop → 0 contracts + warning)
+  - commission (round-trip $) + slippage (ticks) in sizing and reporting
+  - maxRiskPerTrade cap; remaining daily budget (warn + max fitting contracts)
+  - prop drawdown: trailing or static, remaining + breach warnings
+  - distant-stop heuristic (>2% of entry → warning)
+  - base "too small → raise risk %" advice replaced with "do not raise risk"
+  - instrument specs verified correct (ES/MES/NQ/MNQ/YM/MYM/RTY/GC/CL)
+- `src/app/risk.tsx`: direction toggle, NQ/MNQ/ES/MES quick switch, full
+  symbol chips, cost/limit/drawdown sections, budget+drawdown in results.
+- Tests: 22/22 pass (12 pre-existing + 10 new advanced cases).
+- Checks: tsc 0, expo lint clean.
