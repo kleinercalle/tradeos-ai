@@ -331,3 +331,23 @@ commit secrets; never ask for private credentials in chat (use Secure Vault
   (never invent levels/timestamps/formations; NO_TRADE on contradiction).
 - E2E validation: synthetic 4-TF NQ charts → live Gemini JSON test.
 - BLOCKED: Cloudflare account (user) to deploy the Worker.
+
+## Phase 2 app — AI analysis screen (2026-09-27, DONE pending emulator)
+
+- `expo-file-system` installed via `npx expo install` (base64 screenshots).
+- `src/lib/gemini.ts`: proxy client. No key in app; explicit consent param;
+  honest GeminiError codes (no_consent/not_configured/network/rate_limited/
+  unavailable/bad_response); verdictLine helper.
+- `src/lib/journal.ts`: optional `aiReport` (stringified IctReport).
+- `src/app/analyze.tsx` restructured:
+  - Step 0: instrument picker (ES/MES/NQ/MNQ/YM/MYM/RTY) + session/date input
+  - Steps 1–4: existing 4-TF checklist (bias/POI/screenshot/notes) preserved
+  - Step 5: review + AI card (consent checkbox required, offline fallback
+    message when proxy not configured) + verdict banner + per-TF
+    observed/possible/not_verified + full synthesis + save AI report to
+    journal (notes + timeframeBias + aiReport JSON)
+- Checks: tsc 0 errors, 12/12 tests pass, expo lint clean, expo-doctor 21/21.
+- Emulator cold-start run 36290681625 triggered (validates release build
+  with the new native module).
+- NOTE: AI button is inert until EXPO_PUBLIC_GEMINI_PROXY_URL is set and
+  the Worker is deployed (needs user's Cloudflare account).
