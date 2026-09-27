@@ -174,3 +174,39 @@ node node_modules/expo/bin/cli prebuild --platform android  # generate android/
 - Tests: 8/8 (tsx --test). tsc --noEmit y expo lint limpios. Package name
   sin cambios; código existente intacto.
 - Release page: https://github.com/kleinercalle/tradeos-ai/releases/tag/v1.0.0-preview
+
+## 2026-09-26 — Startup fix (v1.0.1): infinite splash resolved
+
+**Symptom:** v1.0.0-preview APK installed on Samsung but stuck forever on the blue Expo splash.
+
+**Root cause (proven with emulator logcat):** the release workflow built with
+`./gradlew assembleDebug`, which does NOT package the JS bundle. On launch,
+`ReactInstance.loadJSBundleFromAssets` threw
+`java.lang.RuntimeException: Unable to load script` → the app could never
+start. Confirmed: v1.0.0-preview APK contains zero `index.android.bundle`.
+
+**Second latent bug (fixed):** `Colors[scheme]` in `app-tabs.tsx:19` and
+`use-theme.ts` threw a TypeError when `useColorScheme()` returned
+null/undefined — also froze the app on the splash. Fixed via
+`resolveColorScheme()` helper (`src/lib/color-scheme.ts`) + regression tests.
+
+**Changes:**
+- `release-apk.yml`: now builds `assembleRelease` with a real release
+  keystore (PKCS12, CN=TRADEOS AI, valid to 2056; credentials in GitHub
+  Secrets: ANDROID_KEYSTORE_BASE64/PASSWORD/ALIAS/KEY_PASSWORD) + signature
+  verification step.
+- `android-emulator-test.yml`: cold-start test now uses the release APK
+  (install → force-stop → launch → 30s → screenshot + logcat artifacts).
+- `_layout.tsx`: SplashErrorBoundary + last-resort timers guarantee
+  `hideAsync()` always runs — the splash can never be infinite again.
+- `animated-icon.tsx`: splash overlay simplified — fixed-timer dismissal,
+  no worklet-callback dependency in the critical path.
+
+**Proof (emulator, API 34, cold start):** screenshot shows TRADEOS AI Home
+fully rendered with native tabs; logcat has 0 FATAL EXCEPTION and 0
+"Unable to load script".
+
+**Note:** v1.0.0-preview was signed with an ephemeral CI debug key, so
+v1.0.1 (new release key) requires uninstalling the old APK first.
+
+**Validation:** expo-doctor 21/21 · tsc clean · eslint clean · 12/12 tests pass.
