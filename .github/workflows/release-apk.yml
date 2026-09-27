@@ -26,6 +26,7 @@ jobs:
       ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
       ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
       EXPO_PUBLIC_REVENUECAT_GALAXY_KEY: ${{ secrets.EXPO_PUBLIC_REVENUECAT_GALAXY_KEY }}
+      EXPO_PUBLIC_GEMINI_PROXY_URL: ${{ secrets.EXPO_PUBLIC_GEMINI_PROXY_URL }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
