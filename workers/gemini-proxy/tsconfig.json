@@ -1,0 +1,1 @@
+{"compilerOptions":{"allowImportingExtensions":true,"esModuleInterop":true,"module":"ESNext","moduleResolution":"bundler","resolveJsonModule":true,"strict":true,"target":"ES2022"},"include":["src/**/*"]}

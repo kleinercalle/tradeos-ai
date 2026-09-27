@@ -1,0 +1,9 @@
+name = "tradeos-gemini-proxy"
+main = "src/index.ts"
+compatibility_date = "2026-09-01"
+
+# Secrets (never commit): wrangler secret put GEMINI_API_KEY
+# Optional tuning:
+# [vars]
+# RATE_PER_IP_HOUR = "5"
+# DAILY_CAP = "20"

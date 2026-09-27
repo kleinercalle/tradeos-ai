@@ -1,0 +1,287 @@
+{
+ "description": "Structured ICT multi-timeframe analysis. Never invent price levels, timestamps or candle formations that cannot be read reliably from the images.",
+ "properties": {
+  "confidence": {
+   "enum": [
+    "low",
+    "medium",
+    "high"
+   ],
+   "type": "string"
+  },
+  "instrument": {
+   "type": "string"
+  },
+  "session": {
+   "type": "string"
+  },
+  "synthesis": {
+   "properties": {
+    "avoid_reasons": {
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "bearish_scenario": {
+     "type": "string"
+    },
+    "bullish_scenario": {
+     "type": "string"
+    },
+    "entry_conditions": {
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "htf_narrative": {
+     "type": "string"
+    },
+    "invalidation": {
+     "type": "string"
+    },
+    "liquidity_targets": {
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "missing_confirmations": {
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "risk_reward": {
+     "description": "e.g. 'approx 1:2.1 based on readable levels' or 'not calculable \u2014 levels not readable'",
+     "type": "string"
+    },
+    "targets": {
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    }
+   },
+   "required": [
+    "htf_narrative",
+    "bullish_scenario",
+    "bearish_scenario",
+    "liquidity_targets",
+    "missing_confirmations",
+    "entry_conditions",
+    "invalidation",
+    "targets",
+    "risk_reward",
+    "avoid_reasons"
+   ],
+   "type": "object"
+  },
+  "timeframes": {
+   "properties": {
+    "daily": {
+     "properties": {
+      "bias": {
+       "enum": [
+        "bullish",
+        "bearish",
+        "neutral",
+        "unclear"
+       ],
+       "type": "string"
+      },
+      "not_verified": {
+       "description": "Expected ICT elements that cannot be confirmed from this image.",
+       "items": {
+        "type": "string"
+       },
+       "type": "array"
+      },
+      "notes": {
+       "type": "string"
+      },
+      "observed": {
+       "description": "Only what is clearly readable in the image.",
+       "items": {
+        "type": "string"
+       },
+       "type": "array"
+      },
+      "possible": {
+       "description": "Plausible but not confirmed from the image.",
+       "items": {
+        "type": "string"
+       },
+       "type": "array"
+      }
+     },
+     "required": [
+      "bias",
+      "observed",
+      "possible",
+      "not_verified"
+     ],
+     "type": "object"
+    },
+    "h1": {
+     "properties": {
+      "bias": {
+       "enum": [
+        "bullish",
+        "bearish",
+        "neutral",
+        "unclear"
+       ],
+       "type": "string"
+      },
+      "not_verified": {
+       "description": "Expected ICT elements that cannot be confirmed from this image.",
+       "items": {
+        "type": "string"
+       },
+       "type": "array"
+      },
+      "notes": {
+       "type": "string"
+      },
+      "observed": {
+       "description": "Only what is clearly readable in the image.",
+       "items": {
+        "type": "string"
+       },
+       "type": "array"
+      },
+      "possible": {
+       "description": "Plausible but not confirmed from the image.",
+       "items": {
+        "type": "string"
+       },
+       "type": "array"
+      }
+     },
+     "required": [
+      "bias",
+      "observed",
+      "possible",
+      "not_verified"
+     ],
+     "type": "object"
+    },
+    "m1": {
+     "properties": {
+      "bias": {
+       "enum": [
+        "bullish",
+        "bearish",
+        "neutral",
+        "unclear"
+       ],
+       "type": "string"
+      },
+      "not_verified": {
+       "description": "Expected ICT elements that cannot be confirmed from this image.",
+       "items": {
+        "type": "string"
+       },
+       "type": "array"
+      },
+      "notes": {
+       "type": "string"
+      },
+      "observed": {
+       "description": "Only what is clearly readable in the image.",
+       "items": {
+        "type": "string"
+       },
+       "type": "array"
+      },
+      "possible": {
+       "description": "Plausible but not confirmed from the image.",
+       "items": {
+        "type": "string"
+       },
+       "type": "array"
+      }
+     },
+     "required": [
+      "bias",
+      "observed",
+      "possible",
+      "not_verified"
+     ],
+     "type": "object"
+    },
+    "m15": {
+     "properties": {
+      "bias": {
+       "enum": [
+        "bullish",
+        "bearish",
+        "neutral",
+        "unclear"
+       ],
+       "type": "string"
+      },
+      "not_verified": {
+       "description": "Expected ICT elements that cannot be confirmed from this image.",
+       "items": {
+        "type": "string"
+       },
+       "type": "array"
+      },
+      "notes": {
+       "type": "string"
+      },
+      "observed": {
+       "description": "Only what is clearly readable in the image.",
+       "items": {
+        "type": "string"
+       },
+       "type": "array"
+      },
+      "possible": {
+       "description": "Plausible but not confirmed from the image.",
+       "items": {
+        "type": "string"
+       },
+       "type": "array"
+      }
+     },
+     "required": [
+      "bias",
+      "observed",
+      "possible",
+      "not_verified"
+     ],
+     "type": "object"
+    }
+   },
+   "required": [
+    "daily",
+    "h1",
+    "m15",
+    "m1"
+   ],
+   "type": "object"
+  },
+  "verdict": {
+   "description": "NO_TRADE when timeframes contradict each other or evidence is insufficient.",
+   "enum": [
+    "TRADE_CANDIDATE",
+    "NO_TRADE",
+    "INSUFFICIENT_DATA"
+   ],
+   "type": "string"
+  }
+ },
+ "required": [
+  "instrument",
+  "session",
+  "timeframes",
+  "synthesis",
+  "verdict"
+ ],
+ "title": "ICTMultiTimeframeReport",
+ "type": "object"
+}

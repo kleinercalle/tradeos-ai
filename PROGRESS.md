@@ -307,3 +307,27 @@ commit secrets; never ask for private credentials in chat (use Secure Vault
 - Phase 1 research: DONE. Model selected: gemini-3.8-flash.
 - Phase 5: target format = Galaxy Store (APK accepted there; confirm at
   submission). Priority: store listing submission ASAP.
+
+## Phase 1 — Gemini backend (2026-09-26/27, IN PROGRESS)
+
+- Gemini API key connected via Secure Vault (user completed 2026-09-26).
+  Key never in chat, never in repo.
+- Skill `gemini` created (`~/workspace/skills/gemini/`): CLI calls
+  generateContent via authd surrogate as x-goog-api-key header.
+  Verified live: key works (API slow from here, ~60s/call).
+- Model: gemini-3.8-flash, fallback 3.7 → 3.6 → 2.5-flash.
+- Worker `workers/gemini-proxy/` (Cloudflare Workers, free tier):
+  - POST /analyze { consent, instrument, session, images[] }, GET /health
+  - Guards: consent required, 1–4 images, 5MB/image, 20MB total,
+    per-IP 5 req/hour, global 20/day (env-tunable), 110s timeout,
+    maxOutputTokens 3000, temperature 0.3
+  - Model chain with 429/5xx fallback; honest errors, never fake analysis
+  - `wrangler.toml`, README with deploy steps
+  - Tests: `src/index.test.ts` 10/10 pass (validate + looksValidReport)
+- ICT schema `ict-schema.json`: per-TF observed/possible/not_verified +
+  synthesis + verdict (TRADE_CANDIDATE/NO_TRADE/INSUFFICIENT_DATA).
+  Notes: $ref inlined (Gemini subset), $schema stripped (API rejects it).
+- Prompt `src/prompt.ts`: per-TF ICT elements per spec, hard rules
+  (never invent levels/timestamps/formations; NO_TRADE on contradiction).
+- E2E validation: synthetic 4-TF NQ charts → live Gemini JSON test.
+- BLOCKED: Cloudflare account (user) to deploy the Worker.
