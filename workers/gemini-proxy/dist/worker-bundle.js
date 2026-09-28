@@ -85,7 +85,8 @@ var ict_schema_default = {
           },
           instrument_seen: {
             description: "Ticker symbol as printed on the chart, e.g. 'NQ'. Null when not readable.",
-            type: ["string", "null"]
+            type: "string",
+            nullable: true
           },
           legible: {
             description: "Whether the chart is readable enough to identify instrument and timeframe.",
@@ -96,7 +97,8 @@ var ict_schema_default = {
           },
           timeframe_seen: {
             description: "Timeframe as printed on the chart, e.g. '15M'. Null when not readable.",
-            type: ["string", "null"]
+            type: "string",
+            nullable: true
           }
         },
         required: ["index", "instrument_seen", "timeframe_seen", "legible"],
