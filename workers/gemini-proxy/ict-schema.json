@@ -9,6 +9,34 @@
    ],
    "type": "string"
   },
+  "image_check": {
+   "description": "Per-image identification, filled BEFORE any analysis. index 0=Daily, 1=1H, 2=15M, 3=1M.",
+   "items": {
+    "properties": {
+     "index": {
+      "type": "integer"
+     },
+     "instrument_seen": {
+      "description": "Ticker symbol as printed on the chart, e.g. 'NQ'. Null when not readable.",
+      "type": ["string", "null"]
+     },
+     "legible": {
+      "description": "Whether the chart is readable enough to identify instrument and timeframe.",
+      "type": "boolean"
+     },
+     "note": {
+      "type": "string"
+     },
+     "timeframe_seen": {
+      "description": "Timeframe as printed on the chart, e.g. '15M'. Null when not readable.",
+      "type": ["string", "null"]
+     }
+    },
+    "required": ["index", "instrument_seen", "timeframe_seen", "legible"],
+    "type": "object"
+   },
+   "type": "array"
+  },
   "instrument": {
    "type": "string"
   },
@@ -278,6 +306,7 @@
  "required": [
   "instrument",
   "session",
+  "image_check",
   "timeframes",
   "synthesis",
   "verdict"

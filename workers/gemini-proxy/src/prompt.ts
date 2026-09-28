@@ -13,13 +13,18 @@ export function buildIctPrompt(instrument: string, session: string): string {
 
 HARD RULES — violating any of these invalidates your answer:
 1. NEVER invent exact price levels, timestamps, or specific candle formations you cannot read reliably from the images. If a level is not legible, say so.
-2. For EVERY timeframe, separate your findings into three lists:
+2. STEP ZERO — IMAGE IDENTIFICATION (do this BEFORE any analysis): for each image in order (Image 1=Daily slot, Image 2=1H slot, Image 3=15M slot, Image 4=1M slot), fill the "image_check" array with:
+   - "instrument_seen": the ticker symbol exactly as printed on the chart (e.g. "NQ", "MNQ", "GC"). Use null ONLY when no symbol is readable.
+   - "timeframe_seen": the timeframe exactly as printed on the chart (e.g. "15M", "5M", "1H", "D"). Use null ONLY when no timeframe label is readable.
+   - "legible": false when the image is too blurry, cropped, or dark to identify instrument and timeframe.
+   Do NOT assume the slot order is correct — report what you actually SEE, even if it contradicts the expected slot.
+3. For EVERY timeframe, separate your findings into three lists:
    - "observed": only what is clearly readable in that image.
    - "possible": plausible but NOT confirmed from the image.
    - "not_verified": ICT elements you expected but cannot confirm.
-3. Analyze each timeframe separately BEFORE combining evidence.
-4. If the timeframes contradict each other, or the evidence is insufficient for a directional read, verdict MUST be "NO_TRADE" (or "INSUFFICIENT_DATA" when images are unreadable).
-5. This is educational analysis, not financial advice.
+4. Analyze each timeframe separately BEFORE combining evidence.
+5. If the timeframes contradict each other, or the evidence is insufficient for a directional read, verdict MUST be "NO_TRADE" (or "INSUFFICIENT_DATA" when images are unreadable).
+6. This is educational analysis, not financial advice.
 
 Analyze each timeframe for its specific elements:
 

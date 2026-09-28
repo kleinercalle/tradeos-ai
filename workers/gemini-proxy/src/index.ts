@@ -165,10 +165,112 @@ export function looksValidReport(obj: unknown): obj is Record<string, unknown> {
   return (
     typeof o.instrument === 'string' &&
     typeof o.session === 'string' &&
+    Array.isArray(o.image_check) &&
     typeof o.timeframes === 'object' &&
     typeof o.synthesis === 'object' &&
     ['TRADE_CANDIDATE', 'NO_TRADE', 'INSUFFICIENT_DATA'].includes(o.verdict as string)
   );
+}
+
+export interface ImageCheck {
+  index: number;
+  instrument_seen: string | null;
+  timeframe_seen: string | null;
+  legible: boolean;
+  note?: string;
+}
+
+export type ConsistencyResult =
+  | { ok: true; warnings: string[] }
+  | { ok: false; code: 'instrument_mismatch' | 'timeframe_mismatch'; error: string };
+
+const EXPECTED_TF = ['Daily', '1H', '15M', '1M'] as const;
+
+/** Normalize a timeframe label the model read off a chart ("15m", "M15", "D" …). */
+export function normalizeTf(label: string | null): string | null {
+  if (!label) return null;
+  const t = label.trim().toUpperCase().replace(/\s+/g, '');
+  const aliases: Record<string, string> = {
+    D: 'DAILY', '1D': 'DAILY', DAILY: 'DAILY',
+    H1: '1H', '1H': '1H', '60': '1H', '60M': '1H',
+    M15: '15M', '15M': '15M', '15': '15M',
+    M1: '1M', '1M': '1M', '1': '1M',
+    M5: '5M', '5M': '5M', '5': '5M',
+    M30: '30M', '30M': '30M',
+    H4: '4H', '4H': '4H',
+    W: 'WEEKLY', '1W': 'WEEKLY',
+  };
+  return aliases[t] ?? t;
+}
+
+export function normalizeInstrument(sym: string | null): string | null {
+  if (!sym) return null;
+  return sym.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+/**
+ * Deterministic screenshot-consistency gate.
+ * Blocks the analysis (ok:false) when images provably contradict the
+ * declared setup: mixed instruments, or a chart whose printed timeframe
+ * does not match its slot. Unreadable labels produce warnings, not blocks.
+ */
+export function checkConsistency(
+  imageCheck: ImageCheck[],
+  expectedInstrument: string,
+  imageCount: number,
+): ConsistencyResult {
+  const warnings: string[] = [];
+  const expected = normalizeInstrument(expectedInstrument) ?? '';
+
+  const seenInstruments = new Map<string, number[]>();
+  for (const c of imageCheck) {
+    const sym = normalizeInstrument(c.instrument_seen);
+    if (sym) {
+      if (!seenInstruments.has(sym)) seenInstruments.set(sym, []);
+      seenInstruments.get(sym)!.push(c.index);
+    } else if (c.legible) {
+      warnings.push(`Image ${c.index + 1}: instrument label not readable.`);
+    }
+  }
+  if (seenInstruments.size > 1) {
+    const parts = [...seenInstruments.entries()]
+      .map(([s, idx]) => `${s} (image ${idx.map((i) => i + 1).join(', ')})`)
+      .join(' vs ');
+    return {
+      ok: false,
+      code: 'instrument_mismatch',
+      error: `Screenshots show different instruments: ${parts}. Replace the images that don't match ${expected || 'the selected instrument'} — analysis blocked.`,
+    };
+  }
+  if (seenInstruments.size === 1) {
+    const [seen] = [...seenInstruments.keys()];
+    if (expected && seen !== expected) {
+      return {
+        ok: false,
+        code: 'instrument_mismatch',
+        error: `Screenshots show ${seen} but the analysis was requested for ${expected}. Fix the instrument or replace the images — analysis blocked.`,
+      };
+    }
+  }
+
+  for (const c of imageCheck) {
+    if (c.index < 0 || c.index >= imageCount) continue;
+    const seenTf = normalizeTf(c.timeframe_seen);
+    const wantTf = normalizeTf(EXPECTED_TF[c.index] ?? '');
+    if (seenTf && wantTf && seenTf !== wantTf) {
+      return {
+        ok: false,
+        code: 'timeframe_mismatch',
+        error: `Image ${c.index + 1} is labeled "${c.timeframe_seen}" but sits in the ${EXPECTED_TF[c.index]} slot. Replace it with the correct ${EXPECTED_TF[c.index]} chart — analysis blocked.`,
+      };
+    }
+    if (!c.legible) {
+      warnings.push(`Image ${c.index + 1} (${EXPECTED_TF[c.index] ?? '?'}): not legible enough to verify.`);
+    } else if (!seenTf) {
+      warnings.push(`Image ${c.index + 1}: timeframe label not readable.`);
+    }
+  }
+  return { ok: true, warnings };
 }
 
 const cors = {
@@ -220,7 +322,16 @@ export default {
         if (!looksValidReport(report)) {
           return json({ error: 'The model returned an incomplete report. Nothing was saved; try again.' }, 502);
         }
-        return json({ report, model, educational: true });
+        const consistency = checkConsistency(
+          (report as { image_check: ImageCheck[] }).image_check,
+          v.instrument,
+          v.images.length,
+        );
+        if (!consistency.ok) {
+          return json({ error: consistency.error, code: consistency.code }, 422);
+        }
+        const warnings = consistency.warnings;
+        return json({ report, model, educational: true, warnings });
       } catch (e) {
         const msg = e instanceof Error ? e.message : 'Analysis failed';
         const status = msg.includes('unavailable') ? 503 : 500;

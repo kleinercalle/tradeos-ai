@@ -4,13 +4,18 @@ function buildIctPrompt(instrument, session) {
 
 HARD RULES \u2014 violating any of these invalidates your answer:
 1. NEVER invent exact price levels, timestamps, or specific candle formations you cannot read reliably from the images. If a level is not legible, say so.
-2. For EVERY timeframe, separate your findings into three lists:
+2. STEP ZERO \u2014 IMAGE IDENTIFICATION (do this BEFORE any analysis): for each image in order (Image 1=Daily slot, Image 2=1H slot, Image 3=15M slot, Image 4=1M slot), fill the "image_check" array with:
+   - "instrument_seen": the ticker symbol exactly as printed on the chart (e.g. "NQ", "MNQ", "GC"). Use null ONLY when no symbol is readable.
+   - "timeframe_seen": the timeframe exactly as printed on the chart (e.g. "15M", "5M", "1H", "D"). Use null ONLY when no timeframe label is readable.
+   - "legible": false when the image is too blurry, cropped, or dark to identify instrument and timeframe.
+   Do NOT assume the slot order is correct \u2014 report what you actually SEE, even if it contradicts the expected slot.
+3. For EVERY timeframe, separate your findings into three lists:
    - "observed": only what is clearly readable in that image.
    - "possible": plausible but NOT confirmed from the image.
    - "not_verified": ICT elements you expected but cannot confirm.
-3. Analyze each timeframe separately BEFORE combining evidence.
-4. If the timeframes contradict each other, or the evidence is insufficient for a directional read, verdict MUST be "NO_TRADE" (or "INSUFFICIENT_DATA" when images are unreadable).
-5. This is educational analysis, not financial advice.
+4. Analyze each timeframe separately BEFORE combining evidence.
+5. If the timeframes contradict each other, or the evidence is insufficient for a directional read, verdict MUST be "NO_TRADE" (or "INSUFFICIENT_DATA" when images are unreadable).
+6. This is educational analysis, not financial advice.
 
 Analyze each timeframe for its specific elements:
 
@@ -70,6 +75,34 @@ var ict_schema_default = {
         "high"
       ],
       type: "string"
+    },
+    image_check: {
+      description: "Per-image identification, filled BEFORE any analysis. index 0=Daily, 1=1H, 2=15M, 3=1M.",
+      items: {
+        properties: {
+          index: {
+            type: "integer"
+          },
+          instrument_seen: {
+            description: "Ticker symbol as printed on the chart, e.g. 'NQ'. Null when not readable.",
+            type: ["string", "null"]
+          },
+          legible: {
+            description: "Whether the chart is readable enough to identify instrument and timeframe.",
+            type: "boolean"
+          },
+          note: {
+            type: "string"
+          },
+          timeframe_seen: {
+            description: "Timeframe as printed on the chart, e.g. '15M'. Null when not readable.",
+            type: ["string", "null"]
+          }
+        },
+        required: ["index", "instrument_seen", "timeframe_seen", "legible"],
+        type: "object"
+      },
+      type: "array"
     },
     instrument: {
       type: "string"
@@ -340,6 +373,7 @@ var ict_schema_default = {
   required: [
     "instrument",
     "session",
+    "image_check",
     "timeframes",
     "synthesis",
     "verdict"
@@ -486,7 +520,91 @@ async function callGemini(env, prompt, images) {
 function looksValidReport(obj) {
   if (typeof obj !== "object" || obj === null) return false;
   const o = obj;
-  return typeof o.instrument === "string" && typeof o.session === "string" && typeof o.timeframes === "object" && typeof o.synthesis === "object" && ["TRADE_CANDIDATE", "NO_TRADE", "INSUFFICIENT_DATA"].includes(o.verdict);
+  return typeof o.instrument === "string" && typeof o.session === "string" && Array.isArray(o.image_check) && typeof o.timeframes === "object" && typeof o.synthesis === "object" && ["TRADE_CANDIDATE", "NO_TRADE", "INSUFFICIENT_DATA"].includes(o.verdict);
+}
+var EXPECTED_TF = ["Daily", "1H", "15M", "1M"];
+function normalizeTf(label) {
+  if (!label) return null;
+  const t = label.trim().toUpperCase().replace(/\s+/g, "");
+  const aliases = {
+    D: "DAILY",
+    "1D": "DAILY",
+    DAILY: "DAILY",
+    H1: "1H",
+    "1H": "1H",
+    "60": "1H",
+    "60M": "1H",
+    M15: "15M",
+    "15M": "15M",
+    "15": "15M",
+    M1: "1M",
+    "1M": "1M",
+    "1": "1M",
+    M5: "5M",
+    "5M": "5M",
+    "5": "5M",
+    M30: "30M",
+    "30M": "30M",
+    H4: "4H",
+    "4H": "4H",
+    W: "WEEKLY",
+    "1W": "WEEKLY"
+  };
+  return aliases[t] ?? t;
+}
+function normalizeInstrument(sym) {
+  if (!sym) return null;
+  return sym.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+function checkConsistency(imageCheck, expectedInstrument, imageCount) {
+  const warnings = [];
+  const expected = normalizeInstrument(expectedInstrument) ?? "";
+  const seenInstruments = /* @__PURE__ */ new Map();
+  for (const c of imageCheck) {
+    const sym = normalizeInstrument(c.instrument_seen);
+    if (sym) {
+      if (!seenInstruments.has(sym)) seenInstruments.set(sym, []);
+      seenInstruments.get(sym).push(c.index);
+    } else if (c.legible) {
+      warnings.push(`Image ${c.index + 1}: instrument label not readable.`);
+    }
+  }
+  if (seenInstruments.size > 1) {
+    const parts = [...seenInstruments.entries()].map(([s, idx]) => `${s} (image ${idx.map((i) => i + 1).join(", ")})`).join(" vs ");
+    return {
+      ok: false,
+      code: "instrument_mismatch",
+      error: `Screenshots show different instruments: ${parts}. Replace the images that don't match ${expected || "the selected instrument"} \u2014 analysis blocked.`
+    };
+  }
+  if (seenInstruments.size === 1) {
+    const [seen] = [...seenInstruments.keys()];
+    if (expected && seen !== expected) {
+      return {
+        ok: false,
+        code: "instrument_mismatch",
+        error: `Screenshots show ${seen} but the analysis was requested for ${expected}. Fix the instrument or replace the images \u2014 analysis blocked.`
+      };
+    }
+  }
+  for (const c of imageCheck) {
+    if (c.index < 0 || c.index >= imageCount) continue;
+    const seenTf = normalizeTf(c.timeframe_seen);
+    const wantTf = normalizeTf(EXPECTED_TF[c.index] ?? "");
+    if (seenTf && wantTf && seenTf !== wantTf) {
+      return {
+        ok: false,
+        code: "timeframe_mismatch",
+        error: `Image ${c.index + 1} is labeled "${c.timeframe_seen}" but sits in the ${EXPECTED_TF[c.index]} slot. Replace it with the correct ${EXPECTED_TF[c.index]} chart \u2014 analysis blocked.`
+      };
+    }
+    if (!c.legible) {
+      warnings.push(`Image ${c.index + 1} (${EXPECTED_TF[c.index] ?? "?"}): not legible enough to verify.`);
+    } else if (!seenTf) {
+      warnings.push(`Image ${c.index + 1}: timeframe label not readable.`);
+    }
+  }
+  return { ok: true, warnings };
 }
 var cors = {
   "Access-Control-Allow-Origin": "*",
@@ -531,7 +649,16 @@ var index_default = {
         if (!looksValidReport(report)) {
           return json({ error: "The model returned an incomplete report. Nothing was saved; try again." }, 502);
         }
-        return json({ report, model, educational: true });
+        const consistency = checkConsistency(
+          report.image_check,
+          v.instrument,
+          v.images.length
+        );
+        if (!consistency.ok) {
+          return json({ error: consistency.error, code: consistency.code }, 422);
+        }
+        const warnings = consistency.warnings;
+        return json({ report, model, educational: true, warnings });
       } catch (e) {
         const msg = e instanceof Error ? e.message : "Analysis failed";
         const status = msg.includes("unavailable") ? 503 : 500;
@@ -542,7 +669,10 @@ var index_default = {
   }
 };
 export {
+  checkConsistency,
   index_default as default,
   looksValidReport,
+  normalizeInstrument,
+  normalizeTf,
   validate
 };

@@ -86,6 +86,28 @@ function TfCard({ label, tf }: { label: string; tf: TimeframeAnalysis }) {
   );
 }
 
+function ImageCheckView({ report }: { report: IctReport }) {
+  const theme = useTheme();
+  const checks = report.image_check ?? [];
+  if (!checks.length && !report.warnings?.length) return null;
+  return (
+    <ThemedView style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
+      <ThemedText type="smallBold">Screenshot validation</ThemedText>
+      {checks.map((c) => (
+        <ThemedText key={c.index} type="small" themeColor="textSecondary">
+          {c.legible ? '✓' : '⚠'} Image {c.index + 1} ({TIMEFRAMES[c.index] ?? '?'}):{' '}
+          {c.instrument_seen ?? '?'} · {c.timeframe_seen ?? '?'}
+        </ThemedText>
+      ))}
+      {(report.warnings ?? []).map((w, i) => (
+        <ThemedText key={i} type="small" style={{ color: '#ef6c00' }}>
+          ⚠ {w}
+        </ThemedText>
+      ))}
+    </ThemedView>
+  );
+}
+
 function ReportView({ report }: { report: IctReport }) {
   const theme = useTheme();
   const s = report.synthesis;
@@ -284,7 +306,9 @@ export default function AnalyzeScreen() {
           ) : (
             <>
               <ThemedText type="small" themeColor="textSecondary">
-                Sends {imageCount} screenshot{imageCount === 1 ? '' : 's'} to the analysis server ({instrument}).
+                {imageCount === 4
+                  ? `Sends 4 screenshots to the analysis server (${instrument}).`
+                  : `Attach all 4 screenshots (Daily, 1H, 15M, 1M) — ${imageCount}/4 attached.`}
               </ThemedText>
               <Pressable onPress={() => setConsent(!consent)} style={styles.consentRow}>
                 <ThemedView style={[styles.checkbox, consent && { backgroundColor: theme.text }]}>
@@ -296,10 +320,10 @@ export default function AnalyzeScreen() {
               </Pressable>
               <Pressable
                 onPress={onAnalyzeAI}
-                disabled={analyzing || !consent || imageCount === 0}
+                disabled={analyzing || !consent || imageCount !== 4}
                 style={[
                   styles.button,
-                  { backgroundColor: analyzing || !consent || imageCount === 0 ? theme.backgroundSelected : theme.text },
+                  { backgroundColor: analyzing || !consent || imageCount !== 4 ? theme.backgroundSelected : theme.text },
                 ]}>
                 {analyzing ? (
                   <ActivityIndicator color={theme.background} />
@@ -325,6 +349,7 @@ export default function AnalyzeScreen() {
 
         {report ? (
           <>
+            <ImageCheckView report={report} />
             <ReportView report={report} />
             {TF_KEYS.map((k, i) => (
               <TfCard key={k} label={TIMEFRAMES[i]} tf={report.timeframes[k]} />

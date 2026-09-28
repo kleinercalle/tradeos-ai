@@ -41,9 +41,19 @@ export interface IctSynthesis {
   avoid_reasons: string[];
 }
 
+export interface ImageCheck {
+  index: number;
+  instrument_seen: string | null;
+  timeframe_seen: string | null;
+  legible: boolean;
+  note?: string;
+}
+
 export interface IctReport {
   instrument: string;
   session: string;
+  /** per-image identification (index 0=Daily, 1=1H, 2=15M, 3=1M) */
+  image_check: ImageCheck[];
   timeframes: {
     daily: TimeframeAnalysis;
     h1: TimeframeAnalysis;
@@ -53,12 +63,14 @@ export interface IctReport {
   synthesis: IctSynthesis;
   verdict: Verdict;
   confidence?: 'low' | 'medium' | 'high';
+  /** non-blocking identification warnings from the server */
+  warnings?: string[];
 }
 
 export interface AnalyzeInput {
   instrument: string;
   session: string;
-  /** local image URIs in order: Daily, 1H, 15M, 1M (nulls skipped) */
+  /** local image URIs in order: Daily, 1H, 15M, 1M — all four required */
   imageUris: (string | null)[];
 }
 
@@ -103,15 +115,15 @@ export async function analyzeCharts(
     );
   }
   const uris = input.imageUris.filter((u): u is string => !!u);
-  if (uris.length === 0) {
+  if (uris.length !== 4) {
     throw new GeminiError(
-      'Attach at least one chart screenshot first.',
+      'Attach all 4 chart screenshots (Daily, 1H, 15M, 1M) before analyzing.',
       'bad_response',
     );
   }
 
   const images: { mimeType: string; data: string }[] = [];
-  for (const uri of uris.slice(0, 4)) {
+  for (const uri of uris) {
     const data = await FileSystem.readAsStringAsync(uri, {
       encoding: FileSystem.EncodingType.Base64,
     });
@@ -146,7 +158,9 @@ export async function analyzeCharts(
 
   const payload = (await res.json().catch(() => null)) as {
     report?: IctReport;
+    warnings?: string[];
     error?: string;
+    code?: string;
   } | null;
 
   if (!res.ok) {
@@ -157,12 +171,19 @@ export async function analyzeCharts(
     );
   }
   const report = payload?.report;
-  if (!report || typeof report.verdict !== 'string' || !report.timeframes || !report.synthesis) {
+  if (
+    !report ||
+    typeof report.verdict !== 'string' ||
+    !Array.isArray(report.image_check) ||
+    !report.timeframes ||
+    !report.synthesis
+  ) {
     throw new GeminiError(
       'The server returned an incomplete report. Nothing was saved — try again.',
       'bad_response',
     );
   }
+  if (payload?.warnings?.length) report.warnings = payload.warnings;
   return report;
 }
 
